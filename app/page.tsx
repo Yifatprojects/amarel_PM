@@ -1,10 +1,17 @@
-const metrics = [
-  { label: "Total Items", value: "128", change: "+12 this week" },
-  { label: "Active Status", value: "96", change: "75% of total" },
-  { label: "Pending Review", value: "18", change: "4 need attention" },
-];
+"use client";
 
-const items = [
+import { FormEvent, useMemo, useState } from "react";
+
+type ItemStatus = "Active" | "Pending" | "Draft";
+
+type Item = {
+  id: string;
+  title: string;
+  status: ItemStatus;
+  createdAt: string;
+};
+
+const initialItems: Item[] = [
   {
     id: "PRD-1042",
     title: "Wireless Noise-Canceling Headphones",
@@ -31,13 +38,88 @@ const items = [
   },
 ];
 
-const statusStyles: Record<string, string> = {
+const statusStyles: Record<ItemStatus, string> = {
   Active: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   Pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
   Draft: "bg-slate-100 text-slate-600 ring-slate-500/20",
 };
 
+function todayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function nextId(items: Item[]) {
+  const numbers = items.map((item) => {
+    const match = item.id.match(/(\d+)$/);
+    return match ? Number(match[1]) : 0;
+  });
+  const max = numbers.length ? Math.max(...numbers) : 1041;
+  return `PRD-${max + 1}`;
+}
+
 export default function Home() {
+  const [items, setItems] = useState<Item[]>(initialItems);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [status, setStatus] = useState<ItemStatus>("Draft");
+
+  const metrics = useMemo(() => {
+    const total = items.length;
+    const active = items.filter((item) => item.status === "Active").length;
+    const pending = items.filter((item) => item.status === "Pending").length;
+
+    return [
+      {
+        label: "Total Items",
+        value: String(total),
+        change: `${total} in catalog`,
+      },
+      {
+        label: "Active Status",
+        value: String(active),
+        change:
+          total > 0
+            ? `${Math.round((active / total) * 100)}% of total`
+            : "0% of total",
+      },
+      {
+        label: "Pending Review",
+        value: String(pending),
+        change:
+          pending > 0 ? `${pending} need attention` : "None pending",
+      },
+    ];
+  }, [items]);
+
+  function openForm() {
+    setTitle("");
+    setStatus("Draft");
+    setIsFormOpen(true);
+  }
+
+  function closeForm() {
+    setIsFormOpen(false);
+    setTitle("");
+    setStatus("Draft");
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return;
+
+    setItems((current) => [
+      ...current,
+      {
+        id: nextId(current),
+        title: trimmedTitle,
+        status,
+        createdAt: todayDate(),
+      },
+    ]);
+    closeForm();
+  }
+
   return (
     <div className="min-h-full bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
@@ -50,6 +132,7 @@ export default function Home() {
           </div>
           <button
             type="button"
+            onClick={openForm}
             className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
           >
             <span aria-hidden="true" className="text-base leading-none">
@@ -154,6 +237,90 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      {isFormOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+          role="presentation"
+          onClick={closeForm}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-item-title"
+            className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2
+              id="add-item-title"
+              className="text-lg font-semibold text-slate-900"
+            >
+              Add Item
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Create a new row in the products table.
+            </p>
+
+            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+              <div>
+                <label
+                  htmlFor="item-title"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Title
+                </label>
+                <input
+                  id="item-title"
+                  type="text"
+                  required
+                  autoFocus
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="Enter product title"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="item-status"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Status
+                </label>
+                <select
+                  id="item-status"
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as ItemStatus)
+                  }
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                >
+                  <option value="Draft">Draft</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Active">Active</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-500"
+                >
+                  Save Item
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
