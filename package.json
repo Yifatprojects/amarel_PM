@@ -1,7 +1,8 @@
 {
-  "name": "amarel-beta-v",
+  "name": "trialfution-ai",
   "version": "0.1.0",
   "private": true,
+  "description": "TrialFution AI — defense-tech field trial management",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -1,326 +1,172 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { AddLocationModal } from "@/components/locations/AddLocationModal";
+import { AddSiteFilesButton } from "@/components/locations/AddSiteFilesButton";
+import {
+  countLocationFiles,
+  formatTimestamp,
+  locationStatusClass,
+} from "@/lib/format";
+import { useApp } from "@/lib/store";
+import type { LocationStatus } from "@/lib/types";
 
-type ItemStatus = "Active" | "Pending" | "Draft";
-
-type Item = {
-  id: string;
-  title: string;
-  status: ItemStatus;
-  createdAt: string;
-};
-
-const initialItems: Item[] = [
-  {
-    id: "PRD-1042",
-    title: "Wireless Noise-Canceling Headphones",
-    status: "Active",
-    createdAt: "2026-03-12",
-  },
-  {
-    id: "PRD-1043",
-    title: "Ergonomic Standing Desk Converter",
-    status: "Pending",
-    createdAt: "2026-03-18",
-  },
-  {
-    id: "PRD-1044",
-    title: "Smart Home Thermostat Hub",
-    status: "Active",
-    createdAt: "2026-03-22",
-  },
-  {
-    id: "PRD-1045",
-    title: "Portable Espresso Maker Kit",
-    status: "Draft",
-    createdAt: "2026-03-28",
-  },
+const statusFilters: Array<"All" | LocationStatus> = [
+  "All",
+  "Active",
+  "Standby",
+  "Debrief",
+  "Offline",
 ];
 
-const statusStyles: Record<ItemStatus, string> = {
-  Active: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-  Pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
-  Draft: "bg-slate-100 text-slate-600 ring-slate-500/20",
-};
+export default function LocationsPage() {
+  const { locations } = useApp();
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<"All" | LocationStatus>("All");
+  const [modalOpen, setModalOpen] = useState(false);
 
-function todayDate() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function nextId(items: Item[]) {
-  const numbers = items.map((item) => {
-    const match = item.id.match(/(\d+)$/);
-    return match ? Number(match[1]) : 0;
-  });
-  const max = numbers.length ? Math.max(...numbers) : 1041;
-  return `PRD-${max + 1}`;
-}
-
-export default function Home() {
-  const [items, setItems] = useState<Item[]>(initialItems);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [status, setStatus] = useState<ItemStatus>("Draft");
-
-  const metrics = useMemo(() => {
-    const total = items.length;
-    const active = items.filter((item) => item.status === "Active").length;
-    const pending = items.filter((item) => item.status === "Pending").length;
-
-    return [
-      {
-        label: "Total Items",
-        value: String(total),
-        change: `${total} in catalog`,
-      },
-      {
-        label: "Active Status",
-        value: String(active),
-        change:
-          total > 0
-            ? `${Math.round((active / total) * 100)}% of total`
-            : "0% of total",
-      },
-      {
-        label: "Pending Review",
-        value: String(pending),
-        change:
-          pending > 0 ? `${pending} need attention` : "None pending",
-      },
-    ];
-  }, [items]);
-
-  function openForm() {
-    setTitle("");
-    setStatus("Draft");
-    setIsFormOpen(true);
-  }
-
-  function closeForm() {
-    setIsFormOpen(false);
-    setTitle("");
-    setStatus("Draft");
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
-
-    setItems((current) => [
-      ...current,
-      {
-        id: nextId(current),
-        title: trimmedTitle,
-        status,
-        createdAt: todayDate(),
-      },
-    ]);
-    closeForm();
-  }
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return locations.filter((location) => {
+      const matchesStatus = status === "All" || location.status === status;
+      const matchesQuery =
+        !q ||
+        location.name.toLowerCase().includes(q) ||
+        location.status.toLowerCase().includes(q) ||
+        location.terrain.toLowerCase().includes(q);
+      return matchesStatus && matchesQuery;
+    });
+  }, [locations, query, status]);
 
   return (
-    <div className="min-h-full bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <div>
-            <p className="text-sm font-medium text-slate-500">Amarel</p>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-              Product Management Dashboard
-            </h1>
-          </div>
-          <button
-            type="button"
-            onClick={openForm}
-            className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
-          >
-            <span aria-hidden="true" className="text-base leading-none">
-              +
-            </span>
-            Add Item
-          </button>
+    <div className="animate-fade-in mx-auto max-w-6xl px-6 py-8 lg:px-10">
+      <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted">
+            Dashboard
+          </p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+            Location Overview
+          </h1>
+          <p className="mt-2 max-w-xl text-sm text-muted">
+            Monitor active trial sites, hardware posture, and field readiness
+            across the operational theater.
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+        >
+          <span aria-hidden>+</span>
+          Add New Location
+        </button>
       </header>
 
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        <section className="mb-8">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Summary
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {metrics.map((metric) => (
-              <article
-                key={metric.label}
-                className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-              >
-                <p className="text-sm font-medium text-slate-500">
-                  {metric.label}
-                </p>
-                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
-                  {metric.value}
-                </p>
-                <p className="mt-1 text-sm text-slate-500">{metric.change}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section>
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Items</h2>
-              <p className="text-sm text-slate-500">
-                Recent products in your catalog
-              </p>
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-5 py-3.5 font-semibold text-slate-600"
-                    >
-                      ID
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-5 py-3.5 font-semibold text-slate-600"
-                    >
-                      Title
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-5 py-3.5 font-semibold text-slate-600"
-                    >
-                      Status
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-5 py-3.5 font-semibold text-slate-600"
-                    >
-                      Created At
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {items.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="transition hover:bg-slate-50/80"
-                    >
-                      <td className="whitespace-nowrap px-5 py-4 font-mono text-xs text-slate-500">
-                        {item.id}
-                      </td>
-                      <td className="px-5 py-4 font-medium text-slate-900">
-                        {item.title}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <span
-                          className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${statusStyles[item.status]}`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-500">
-                        {item.createdAt}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {isFormOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
-          role="presentation"
-          onClick={closeForm}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-item-title"
-            className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2
-              id="add-item-title"
-              className="text-lg font-semibold text-slate-900"
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <label htmlFor="location-search" className="sr-only">
+            Search locations
+          </label>
+          <input
+            id="location-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search by name or status…"
+            className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted/70 focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {statusFilters.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setStatus(filter)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                status === filter
+                  ? "bg-accent/15 text-accent ring-1 ring-accent/30"
+                  : "border border-border text-muted hover:border-border-strong hover:text-foreground"
+              }`}
             >
-              Add Item
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Create a new row in the products table.
-            </p>
+              {filter}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-              <div>
-                <label
-                  htmlFor="item-title"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
-                >
-                  Title
-                </label>
-                <input
-                  id="item-title"
-                  type="text"
-                  required
-                  autoFocus
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="Enter product title"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
-                />
-              </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((location) => {
+          const fileCount = countLocationFiles(location);
 
-              <div>
-                <label
-                  htmlFor="item-status"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
-                >
-                  Status
-                </label>
-                <select
-                  id="item-status"
-                  value={status}
-                  onChange={(event) =>
-                    setStatus(event.target.value as ItemStatus)
-                  }
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
-                >
-                  <option value="Draft">Draft</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Active">Active</option>
-                </select>
-              </div>
+          return (
+            <article
+              key={location.id}
+              className="group flex flex-col rounded-xl border border-border bg-surface p-5 transition hover:border-accent/35 hover:bg-surface-elevated"
+            >
+              <Link href={`/locations/${location.id}`} className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-[11px] text-muted">
+                      {location.id}
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold text-foreground group-hover:text-accent">
+                      {location.name}
+                    </h2>
+                  </div>
+                  <span
+                    className={`inline-flex shrink-0 rounded-md px-2 py-1 text-[11px] font-medium ring-1 ring-inset ${locationStatusClass(location.status)}`}
+                  >
+                    {location.status}
+                  </span>
+                </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-500"
-                >
-                  Save Item
-                </button>
+                <dl className="mt-4 space-y-2 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Terrain</dt>
+                    <dd className="text-metallic">{location.terrain}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Hardware</dt>
+                    <dd className="text-metallic">
+                      {location.hardware.length} units
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Files</dt>
+                    <dd className="text-metallic">
+                      {fileCount} {fileCount === 1 ? "file" : "files"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted">Updated</dt>
+                    <dd className="text-right text-xs text-muted">
+                      {formatTimestamp(location.lastUpdated)}
+                    </dd>
+                  </div>
+                </dl>
+              </Link>
+
+              <div className="mt-4 flex items-center justify-between gap-2 border-t border-border pt-4">
+                <p className="text-xs text-muted">
+                  Site + hardware uploads
+                </p>
+                <AddSiteFilesButton locationId={location.id} />
               </div>
-            </form>
-          </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="mt-10 rounded-xl border border-dashed border-border-strong px-6 py-12 text-center">
+          <p className="text-sm text-muted">
+            No locations match the current search or filter.
+          </p>
         </div>
       )}
+
+      <AddLocationModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }
