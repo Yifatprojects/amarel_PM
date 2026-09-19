@@ -1,11 +1,11 @@
 export default function SettingsPage() {
   return (
-    <div className="animate-fade-in mx-auto max-w-3xl px-6 py-8 lg:px-10">
-      <header className="border-b border-border pb-6">
+    <div className="animate-fade-in mx-auto max-w-3xl px-4 py-5 sm:px-6 sm:py-8 lg:px-10">
+      <header className="border-b border-border pb-5 sm:pb-6">
         <p className="text-[11px] uppercase tracking-[0.18em] text-muted">
           Configuration
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           Settings
         </h1>
         <p className="mt-2 text-sm text-muted">
@@ -49,12 +49,12 @@ function SettingRow({
   value: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-border bg-surface px-5 py-4">
-      <div>
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-5">
+      <div className="min-w-0">
         <p className="text-sm font-semibold text-foreground">{title}</p>
         <p className="mt-1 text-sm text-muted">{description}</p>
       </div>
-      <span className="shrink-0 rounded-md border border-border-strong bg-surface-elevated px-2.5 py-1 text-xs text-metallic">
+      <span className="w-fit shrink-0 rounded-md border border-border-strong bg-surface-elevated px-2.5 py-1 text-xs text-metallic">
         {value}
       </span>
     </div>

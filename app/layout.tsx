@@ -21,6 +21,13 @@ export const metadata: Metadata = {
     "Defense-tech field trial management — regions, locations, hardware, and AI-assisted debriefs.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#0f172a",
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html

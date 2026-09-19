@@ -74,7 +74,7 @@ export function GlobalUploadModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close upload modal"
@@ -85,9 +85,9 @@ export function GlobalUploadModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="upload-title"
-        className="animate-fade-in relative w-full max-w-xl rounded-xl border border-border bg-surface shadow-2xl"
+        className="animate-fade-in relative flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-2xl border border-border bg-surface shadow-2xl sm:rounded-xl"
       >
-        <div className="border-b border-border px-6 py-4">
+        <div className="border-b border-border px-4 py-4 sm:px-6">
           <p className="text-[11px] uppercase tracking-[0.16em] text-muted">
             Global Upload
           </p>
@@ -103,7 +103,10 @@ export function GlobalUploadModal() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 overflow-y-auto px-4 py-5 sm:px-6"
+        >
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Region">
               <select

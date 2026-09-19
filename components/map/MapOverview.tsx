@@ -38,16 +38,16 @@ export function MapOverview({ regions, regionFilterId, onUpload }: Props) {
   );
 
   return (
-    <div className="animate-fade-in flex h-full min-h-[640px] flex-col px-4 py-5 lg:px-6">
-      <header className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="animate-fade-in flex h-full min-h-[70dvh] flex-col px-3 py-4 sm:min-h-[640px] sm:px-4 sm:py-5 lg:px-6">
+      <header className="mb-3 flex flex-col gap-3 sm:mb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div>
           <p className="text-[11px] uppercase tracking-[0.16em] text-muted">
             Locations & Map
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground lg:text-3xl">
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
             {title}
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted">
+          <p className="mt-2 hidden max-w-2xl text-sm text-muted sm:block">
             Interactive GIS overview of deployed sensors and loggers. Pin color
             reflects live hardware posture across the trial theater.
           </p>
@@ -55,26 +55,26 @@ export function MapOverview({ regions, regionFilterId, onUpload }: Props) {
         <button
           type="button"
           onClick={onUpload}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+          className="hidden items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110 sm:inline-flex"
         >
           <span aria-hidden>+</span>
           Upload Files
         </button>
       </header>
 
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-3 flex flex-wrap gap-2 sm:mb-4 sm:gap-3">
         <LegendSwatch
           color="#10b981"
           label={`Operational (${counts.operational})`}
         />
         <LegendSwatch color="#f59e0b" label={`Warning (${counts.warning})`} />
         <LegendSwatch color="#f43f5e" label={`Critical (${counts.critical})`} />
-        <span className="rounded-md border border-border bg-surface px-3 py-1.5 text-xs text-muted">
-          {pins.length} hardware pins
+        <span className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-[11px] text-muted sm:px-3 sm:text-xs">
+          {pins.length} pins
         </span>
       </div>
 
-      <div className="relative min-h-[520px] flex-1 overflow-hidden rounded-xl border border-border bg-surface shadow-[inset_0_1px_0_rgba(197,208,224,0.08)]">
+      <div className="relative min-h-[55dvh] flex-1 overflow-hidden rounded-xl border border-border bg-surface shadow-[inset_0_1px_0_rgba(197,208,224,0.08)] sm:min-h-[520px]">
         <LeafletMapCanvas
           pins={pins}
           onOpenDetails={(pin) =>
@@ -145,6 +145,8 @@ function LeafletMapCanvas({
       markersRef.current = createMarkers(L, map, pins, (pin) =>
         onOpenRef.current(pin),
       );
+      window.setTimeout(() => map.invalidateSize(), 50);
+      window.setTimeout(() => map.invalidateSize(), 250);
     }
 
     void setup();

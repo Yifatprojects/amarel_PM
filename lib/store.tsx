@@ -43,6 +43,8 @@ type AppContextValue = {
   setAiOpen: (open: boolean) => void;
   isUploadOpen: boolean;
   setUploadOpen: (open: boolean) => void;
+  isMobileTreeOpen: boolean;
+  setMobileTreeOpen: (open: boolean) => void;
   addLocation: (input: NewLocationInput) => void;
   updateHardwareNotes: (
     locationId: string,
@@ -155,6 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ]);
   const [isAiOpen, setAiOpen] = useState(false);
   const [isUploadOpen, setUploadOpen] = useState(false);
+  const [isMobileTreeOpen, setMobileTreeOpen] = useState(false);
 
   const getRegion = useCallback(
     (id: string) => regions.find((region) => region.id === id),
@@ -336,6 +339,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAiOpen,
       isUploadOpen,
       setUploadOpen,
+      isMobileTreeOpen,
+      setMobileTreeOpen,
       addLocation,
       updateHardwareNotes,
       updateHardwareStatus,
@@ -351,6 +356,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       chatMessages,
       isAiOpen,
       isUploadOpen,
+      isMobileTreeOpen,
       addLocation,
       updateHardwareNotes,
       updateHardwareStatus,

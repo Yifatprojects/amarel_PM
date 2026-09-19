@@ -105,7 +105,7 @@ function LocationDetail({
   const totalFiles = countLocationFiles(location);
 
   return (
-    <div className="animate-fade-in mx-auto max-w-5xl px-6 py-8 lg:px-8">
+    <div className="animate-fade-in mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
       <button
         type="button"
         onClick={onBackToMap}
@@ -172,7 +172,7 @@ function HardwareDetail({
   const severity = mapPinSeverity(status);
 
   return (
-    <div className="animate-fade-in mx-auto max-w-5xl px-6 py-8 lg:px-8">
+    <div className="animate-fade-in mx-auto max-w-5xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
       <button
         type="button"
         onClick={onBackToMap}
@@ -357,12 +357,12 @@ function Header({
   onUpload: () => void;
 }) {
   return (
-    <header className="mt-4 flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-start sm:justify-between">
-      <div>
+    <header className="mt-4 flex flex-col gap-3 border-b border-border pb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:pb-6">
+      <div className="min-w-0">
         <p className="text-[11px] uppercase tracking-[0.16em] text-muted">
           {eyebrow}
         </p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           {title}
         </h1>
         <p className="mt-2 text-sm text-muted">{subtitle}</p>
@@ -378,7 +378,7 @@ function Header({
         <button
           type="button"
           onClick={onUpload}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-background transition hover:brightness-110"
+          className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-background transition hover:brightness-110 sm:px-4 sm:py-2.5 sm:text-sm"
         >
           <span aria-hidden>+</span>
           Upload Files

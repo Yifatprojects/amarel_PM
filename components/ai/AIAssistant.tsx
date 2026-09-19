@@ -24,10 +24,11 @@ export function AIAssistant() {
       <button
         type="button"
         onClick={() => setAiOpen(true)}
-        className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-surface-elevated px-4 py-3 text-sm font-medium text-accent shadow-[0_10px_40px_rgba(0,0,0,0.45)] transition hover:border-accent hover:bg-accent/10"
+        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-surface-elevated px-3.5 py-3 text-sm font-medium text-accent shadow-[0_10px_40px_rgba(0,0,0,0.45)] transition hover:border-accent hover:bg-accent/10 sm:bottom-6 sm:right-6 sm:px-4"
       >
         <span className="h-2 w-2 rounded-full bg-accent shadow-[0_0_10px_var(--accent)]" />
-        AI Assistant
+        <span className="hidden min-[380px]:inline">AI Assistant</span>
+        <span className="min-[380px]:hidden">AI</span>
       </button>
 
       {isAiOpen && (
@@ -38,7 +39,7 @@ export function AIAssistant() {
             className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
             onClick={() => setAiOpen(false)}
           />
-          <aside className="animate-slide-in-right relative flex h-full w-full max-w-md flex-col border-l border-border bg-surface shadow-2xl">
+          <aside className="animate-slide-in-right relative flex h-full w-full max-w-full flex-col border-l border-border bg-surface shadow-2xl sm:max-w-md">
             <header className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.16em] text-muted">

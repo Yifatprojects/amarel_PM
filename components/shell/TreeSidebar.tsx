@@ -5,7 +5,13 @@ import { countLocationFiles, countRegionFiles } from "@/lib/format";
 import { useApp } from "@/lib/store";
 import type { Hardware, Region, TrialLocation } from "@/lib/types";
 
-export function TreeSidebar() {
+export function TreeSidebar({
+  className,
+  onNavigate,
+}: {
+  className?: string;
+  onNavigate?: () => void;
+}) {
   const { regions, selection, setSelection } = useApp();
   const [query, setQuery] = useState("");
   const [expandedRegions, setExpandedRegions] = useState<Record<string, boolean>>(
@@ -14,6 +20,11 @@ export function TreeSidebar() {
   const [expandedLocations, setExpandedLocations] = useState<
     Record<string, boolean>
   >({});
+
+  function selectAndNavigate(next: Parameters<typeof setSelection>[0]) {
+    setSelection(next);
+    onNavigate?.();
+  }
 
   const selectedHardwareId =
     selection.type === "hardware" ? selection.hardwareId : null;
@@ -102,7 +113,9 @@ export function TreeSidebar() {
   }
 
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-surface">
+    <aside
+      className={`flex h-full w-72 shrink-0 flex-col border-r border-border bg-surface ${className ?? ""}`}
+    >
       <div className="border-b border-border px-4 py-4">
         <p className="text-[11px] uppercase tracking-[0.16em] text-muted">
           Theater Tree
@@ -130,7 +143,7 @@ export function TreeSidebar() {
 
         <button
           type="button"
-          onClick={() => setSelection({ type: "map" })}
+          onClick={() => selectAndNavigate({ type: "map" })}
           className={`mt-3 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
             selection.type === "map"
               ? "bg-accent/10 text-accent ring-1 ring-accent/25"
@@ -168,7 +181,7 @@ export function TreeSidebar() {
                   type="button"
                   onClick={() => {
                     setExpandedRegions((c) => ({ ...c, [region.id]: true }));
-                    setSelection({ type: "region", regionId: region.id });
+                    selectAndNavigate({ type: "region", regionId: region.id });
                   }}
                   className={`flex min-w-0 flex-1 items-center justify-between rounded-lg px-2 py-2 text-left text-sm transition ${
                     regionActive
@@ -199,7 +212,7 @@ export function TreeSidebar() {
                           ...c,
                           [location.id]: true,
                         }));
-                        setSelection({
+                        selectAndNavigate({
                           type: "location",
                           regionId: region.id,
                           locationId: location.id,
@@ -210,7 +223,7 @@ export function TreeSidebar() {
                           ...c,
                           [location.id]: true,
                         }));
-                        setSelection({
+                        selectAndNavigate({
                           type: "hardware",
                           regionId: region.id,
                           locationId: location.id,

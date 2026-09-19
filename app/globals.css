@@ -131,4 +131,12 @@ body {
 .leaflet-container {
   background: #020617;
   font: inherit;
+  touch-action: pan-x pan-y;
+}
+
+@media (max-width: 767px) {
+  .leaflet-control-zoom {
+    margin-top: 12px !important;
+    margin-left: 12px !important;
+  }
 }
