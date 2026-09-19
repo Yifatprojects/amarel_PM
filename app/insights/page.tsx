@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { countLocationFiles } from "@/lib/format";
+import { countLocationFiles, flattenLocations } from "@/lib/format";
 import { useApp } from "@/lib/store";
 
 export default function InsightsPage() {
-  const { locations } = useApp();
+  const { regions } = useApp();
   const [report, setReport] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
   const stats = useMemo(() => {
+    const locations = flattenLocations(regions).map((item) => item.location);
     const activeSites = locations.filter((l) => l.status === "Active").length;
     const hardware = locations.flatMap((l) => l.hardware);
     const operational = hardware.filter((h) => h.status === "Operational").length;
@@ -25,7 +26,7 @@ export default function InsightsPage() {
       {
         label: "Total Active Sites",
         value: String(activeSites),
-        detail: `${locations.length} sites in theater`,
+        detail: `${locations.length} sites across ${regions.length} regions`,
       },
       {
         label: "Hardware Status",
@@ -43,45 +44,54 @@ export default function InsightsPage() {
         detail: "Uploaded documents & logs",
       },
     ];
-  }, [locations]);
+  }, [regions]);
 
   function generateDebrief() {
     setGenerating(true);
     window.setTimeout(() => {
-      const active = locations.filter((l) => l.status === "Active");
-      const degraded = locations
-        .flatMap((l) =>
-          l.hardware
-            .filter((h) => h.status === "Degraded" || h.status === "Offline")
-            .map((h) => `${h.name} @ ${l.name} (${h.status})`),
-        );
+      const locations = flattenLocations(regions);
+      const active = locations.filter(({ location }) => location.status === "Active");
+      const degraded = locations.flatMap(({ region, location }) =>
+        location.hardware
+          .filter((h) => h.status === "Degraded" || h.status === "Offline")
+          .map(
+            (h) =>
+              `${h.name} @ ${location.name} (${region.name}) — ${h.status}`,
+          ),
+      );
 
       setReport(
         [
-          "AUTOMATED MULTI-SITE DEBRIEF — TrialFution AI",
+          "AUTOMATED MULTI-SITE DEBRIEF — TrialFusion AI",
           `Generated: ${new Date().toUTCString()}`,
           "",
           "1. EXECUTIVE SUMMARY",
-          `Theater posture remains controlled with ${active.length} active trial site(s). Cross-site telemetry and field uploads indicate localized degradation rather than systemic failure.`,
+          `Theater posture remains controlled with ${active.length} active trial site(s) across ${regions.length} regions. Cross-site telemetry indicates localized degradation rather than systemic failure.`,
           "",
-          "2. SITE SNAPSHOT",
-          ...locations.map(
-            (l) =>
-              `• ${l.name} [${l.status}] — ${l.hardware.length} hardware unit(s), contact ${l.contactName}.`,
+          "2. REGION SNAPSHOT",
+          ...regions.map(
+            (region) =>
+              `• ${region.name} — ${region.locations.length} location(s).`,
           ),
           "",
-          "3. ANOMALY FOCUS",
+          "3. SITE SNAPSHOT",
+          ...locations.map(
+            ({ region, location }) =>
+              `• ${location.name} [${location.status}] — ${region.name} — ${location.hardware.length} hardware unit(s).`,
+          ),
+          "",
+          "4. ANOMALY FOCUS",
           degraded.length > 0
             ? degraded.map((line) => `• ${line}`).join("\n")
             : "• No degraded or offline hardware currently flagged.",
           "",
-          "4. NORTHERN FOREST SITE 4 — SIGNAL DROP (SAMPLE)",
-          "Acoustic Node 02 experienced an 18:42–18:51 dropout. Correlated humidity rise from Weather Microstation WX-4 and technician voice notes support moisture/condensation as the primary cause. Recommend seal inspection and temporary gain reduction during high-humidity windows.",
+          "5. GALILEE RANGE ALPHA — SIGNAL DROP (SAMPLE)",
+          "Acoustic Sensor B experienced an 18:42–18:51 dropout. Correlated humidity rise from Weather Microstation WX-4 and technician voice notes support moisture/condensation as the primary cause.",
           "",
-          "5. RECOMMENDED ACTIONS",
-          "• Prioritize Acoustic Node 02 maintenance at Northern Forest Site 4.",
-          "• Keep Coastal Observation Point Kilo on standby until sea-state clearance.",
-          "• Archive Highland Ridge Echo packages and close debrief loop.",
+          "6. RECOMMENDED ACTIONS",
+          "• Prioritize Acoustic Sensor B maintenance at Galilee Range Alpha.",
+          "• Keep Ramon Crater Site 1 on standby until window clearance.",
+          "• Archive Mojave Test Center packages and close debrief loop.",
           "",
           "— End of automated debrief —",
         ].join("\n"),
@@ -95,13 +105,13 @@ export default function InsightsPage() {
       <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-muted">
-            Insights & Reports
+            Reports & Insights
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
             Insights & Debrief Generator
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            Synthesize multi-site field evidence into structured operational
+            Synthesize multi-region field evidence into structured operational
             summaries for command review.
           </p>
         </div>
@@ -138,8 +148,8 @@ export default function InsightsPage() {
             Generated Debrief Report
           </h2>
           <p className="mt-1 text-sm text-muted">
-            Sample multi-site narrative assembled from live location state and
-            field artifacts.
+            Sample multi-site narrative assembled from live region and location
+            state.
           </p>
         </div>
         <div className="px-5 py-5">

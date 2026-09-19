@@ -8,7 +8,13 @@ export type TerrainType =
   | "Mountain"
   | "Open Field";
 
-export type HardwareStatus = "Operational" | "Degraded" | "Maintenance" | "Offline";
+export type HardwareStatus =
+  | "Operational"
+  | "Degraded"
+  | "Maintenance"
+  | "Offline";
+
+export type HardwareCategory = "Sensor" | "Logger";
 
 export type UploadedFile = {
   id: string;
@@ -21,6 +27,7 @@ export type UploadedFile = {
 export type Hardware = {
   id: string;
   name: string;
+  category: HardwareCategory;
   technician: string;
   coordinates: string;
   placementNotes: string;
@@ -43,6 +50,12 @@ export type TrialLocation = {
   lastUpdated: string;
 };
 
+export type Region = {
+  id: string;
+  name: string;
+  locations: TrialLocation[];
+};
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
@@ -51,4 +64,18 @@ export type ChatMessage = {
   timestamp: string;
 };
 
-export type AppView = "locations" | "insights" | "settings";
+export type TreeSelection =
+  | { type: "region"; regionId: string }
+  | { type: "location"; regionId: string; locationId: string }
+  | {
+      type: "hardware";
+      regionId: string;
+      locationId: string;
+      hardwareId: string;
+    };
+
+export type UploadTarget = {
+  regionId: string;
+  locationId: string;
+  hardwareId: string | "location";
+};

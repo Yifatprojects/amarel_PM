@@ -16,9 +16,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TrialFution AI",
+  title: "TrialFusion AI",
   description:
-    "Defense-tech field trial management — locations, hardware, and AI-assisted debriefs.",
+    "Defense-tech field trial management — regions, locations, hardware, and AI-assisted debriefs.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -9,7 +9,7 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-2 text-sm text-muted">
-          Workspace preferences for TrialFution AI field operations.
+          Workspace preferences for TrialFusion AI field operations.
         </p>
       </header>
 

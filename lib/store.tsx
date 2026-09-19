@@ -8,16 +8,21 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { initialLocations } from "./mock-data";
+import { initialRegions } from "./mock-data";
 import type {
   ChatMessage,
   Hardware,
+  HardwareCategory,
+  Region,
   TerrainType,
+  TreeSelection,
   TrialLocation,
+  UploadTarget,
   UploadedFile,
 } from "./types";
 
 export type NewLocationInput = {
+  regionId: string;
   name: string;
   coordinates: string;
   accessCode: string;
@@ -25,27 +30,36 @@ export type NewLocationInput = {
   contactPhone: string;
   terrain: TerrainType;
   initialHardware: string;
+  hardwareCategory: HardwareCategory;
 };
 
 type AppContextValue = {
-  locations: TrialLocation[];
+  regions: Region[];
+  selection: TreeSelection;
+  setSelection: (selection: TreeSelection) => void;
   chatMessages: ChatMessage[];
   isAiOpen: boolean;
   setAiOpen: (open: boolean) => void;
+  isUploadOpen: boolean;
+  setUploadOpen: (open: boolean) => void;
   addLocation: (input: NewLocationInput) => void;
   updateHardwareNotes: (
     locationId: string,
     hardwareId: string,
     notes: string,
   ) => void;
-  addHardwareFiles: (
+  uploadFiles: (target: UploadTarget, files: File[]) => void;
+  sendChatMessage: (content: string) => void;
+  getRegion: (id: string) => Region | undefined;
+  getLocation: (
+    locationId: string,
+  ) => { region: Region; location: TrialLocation } | undefined;
+  getHardware: (
     locationId: string,
     hardwareId: string,
-    files: File[],
-  ) => void;
-  addLocationFiles: (locationId: string, files: File[]) => void;
-  sendChatMessage: (content: string) => void;
-  getLocation: (id: string) => TrialLocation | undefined;
+  ) =>
+    | { region: Region; location: TrialLocation; hardware: Hardware }
+    | undefined;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -54,25 +68,51 @@ function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function toUploaded(files: File[]): UploadedFile[] {
+  return files.map((file) => ({
+    id: uid("f"),
+    name: file.name,
+    type: file.type || "application/octet-stream",
+    size: file.size,
+    uploadedAt: new Date().toISOString(),
+  }));
+}
+
+function normalizeRegions(regions: Region[]): Region[] {
+  return regions.map((region) => ({
+    ...region,
+    locations: region.locations.map((location) => ({
+      ...location,
+      files: location.files ?? [],
+      hardware: location.hardware.map((item) => ({
+        ...item,
+        files: item.files ?? [],
+        category: item.category ?? "Sensor",
+      })),
+    })),
+  }));
+}
+
 function buildMockReply(question: string): ChatMessage {
   const lower = question.toLowerCase();
   const isSignal =
     lower.includes("signal") ||
     lower.includes("drop") ||
+    lower.includes("galilee") ||
     lower.includes("northern") ||
-    lower.includes("forest");
+    lower.includes("acoustic");
 
   if (isSignal) {
     return {
       id: uid("msg"),
       role: "assistant",
       content:
-        "Based on field artifacts from Northern Forest Site 4, the signal drop on Acoustic Node 02 (18:42–18:51) most likely resulted from a transient humidity spike under the canopy. Weather Microstation WX-4 recorded a sharp moisture rise in the same window, and the technician voice note confirms condensation around the node housing. Recommend verifying seal integrity and delaying high-gain capture until humidity normalizes.",
+        "Based on field artifacts from Galilee Range Alpha (Northern Israel), the signal drop on Acoustic Sensor B (18:42–18:51) most likely resulted from a transient humidity spike under the canopy. Weather Microstation WX-4 recorded a sharp moisture rise in the same window, and the technician voice note confirms condensation around the node housing. Recommend verifying seal integrity and delaying high-gain capture until humidity normalizes.",
       sources: [
         { label: "CSV Log", fileName: "acoustic_log_0916.csv" },
         { label: "Weather Trace", fileName: "wx4_humidity_trace.csv" },
         { label: "Voice Note", fileName: "node02_field_note.m4a" },
-        { label: "Debrief PDF", fileName: "signal_drop_debrief.pdf" },
+        { label: "Site Brief", fileName: "galilee_site_brief.pdf" },
       ],
       timestamp: new Date().toISOString(),
     };
@@ -82,43 +122,62 @@ function buildMockReply(question: string): ChatMessage {
     id: uid("msg"),
     role: "assistant",
     content:
-      "I reviewed indexed trial documents across active sites. Negev Desert Test Range hardware remains within nominal thresholds. Coastal Observation Point Kilo is on standby pending sea-state clearance. Ask about a specific site, hardware node, or uploaded log for a sourced assessment.",
+      "I reviewed indexed trial documents across Northern Israel, Southern Israel, and California. Negev Desert Range hardware remains within nominal thresholds. Ramon Crater Site 1 is on standby. Ask about a specific region, location, or hardware node for a sourced assessment.",
     sources: [
       { label: "Seismic Baseline", fileName: "seismic_baseline_0916.csv" },
-      {
-        label: "Maintenance Checklist",
-        fileName: "radar_maintenance_checklist.pdf",
-      },
+      { label: "Mojave Closeout", fileName: "mojave_closeout_notes.pdf" },
     ],
     timestamp: new Date().toISOString(),
   };
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [locations, setLocations] = useState<TrialLocation[]>(() =>
-    initialLocations.map((location) => ({
-      ...location,
-      files: location.files ?? [],
-      hardware: location.hardware.map((item) => ({
-        ...item,
-        files: item.files ?? [],
-      })),
-    })),
+  const [regions, setRegions] = useState<Region[]>(() =>
+    normalizeRegions(initialRegions),
   );
+  const [selection, setSelection] = useState<TreeSelection>({
+    type: "region",
+    regionId: initialRegions[0].id,
+  });
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
       content:
-        "TrialFution AI online. Ask about field documents, hardware logs, or site anomalies. Example: “What caused the signal drop at Northern Forest Site 4?”",
+        "TrialFusion AI online. Ask about field documents, hardware logs, or site anomalies. Example: “What caused the signal drop at Galilee Range Alpha?”",
       timestamp: new Date().toISOString(),
     },
   ]);
   const [isAiOpen, setAiOpen] = useState(false);
+  const [isUploadOpen, setUploadOpen] = useState(false);
+
+  const getRegion = useCallback(
+    (id: string) => regions.find((region) => region.id === id),
+    [regions],
+  );
 
   const getLocation = useCallback(
-    (id: string) => locations.find((location) => location.id === id),
-    [locations],
+    (locationId: string) => {
+      for (const region of regions) {
+        const location = region.locations.find((item) => item.id === locationId);
+        if (location) return { region, location };
+      }
+      return undefined;
+    },
+    [regions],
+  );
+
+  const getHardware = useCallback(
+    (locationId: string, hardwareId: string) => {
+      const found = getLocation(locationId);
+      if (!found) return undefined;
+      const hardware = found.location.hardware.find(
+        (item) => item.id === hardwareId,
+      );
+      if (!hardware) return undefined;
+      return { ...found, hardware };
+    },
+    [getLocation],
   );
 
   const addLocation = useCallback((input: NewLocationInput) => {
@@ -127,6 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           {
             id: uid("hw"),
             name: input.initialHardware.trim(),
+            category: input.hardwareCategory,
             technician: "Unassigned",
             coordinates: input.coordinates,
             placementNotes: "Pending field placement.",
@@ -151,71 +211,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lastUpdated: new Date().toISOString(),
     };
 
-    setLocations((current) => [location, ...current]);
+    setRegions((current) =>
+      current.map((region) =>
+        region.id === input.regionId
+          ? { ...region, locations: [location, ...region.locations] }
+          : region,
+      ),
+    );
+    setSelection({
+      type: "location",
+      regionId: input.regionId,
+      locationId: location.id,
+    });
   }, []);
 
   const updateHardwareNotes = useCallback(
     (locationId: string, hardwareId: string, notes: string) => {
-      setLocations((current) =>
-        current.map((location) => {
-          if (location.id !== locationId) return location;
-          return {
-            ...location,
-            lastUpdated: new Date().toISOString(),
-            hardware: location.hardware.map((item) =>
-              item.id === hardwareId ? { ...item, notes } : item,
-            ),
-          };
-        }),
+      setRegions((current) =>
+        current.map((region) => ({
+          ...region,
+          locations: region.locations.map((location) => {
+            if (location.id !== locationId) return location;
+            return {
+              ...location,
+              lastUpdated: new Date().toISOString(),
+              hardware: location.hardware.map((item) =>
+                item.id === hardwareId ? { ...item, notes } : item,
+              ),
+            };
+          }),
+        })),
       );
     },
     [],
   );
 
-  const addHardwareFiles = useCallback(
-    (locationId: string, hardwareId: string, files: File[]) => {
-      const uploaded: UploadedFile[] = files.map((file) => ({
-        id: uid("f"),
-        name: file.name,
-        type: file.type || "application/octet-stream",
-        size: file.size,
-        uploadedAt: new Date().toISOString(),
-      }));
+  const uploadFiles = useCallback((target: UploadTarget, files: File[]) => {
+    if (!files.length) return;
+    const uploaded = toUploaded(files);
 
-      setLocations((current) =>
-        current.map((location) => {
-          if (location.id !== locationId) return location;
-          return {
-            ...location,
-            lastUpdated: new Date().toISOString(),
-            hardware: location.hardware.map((item) =>
-              item.id === hardwareId
-                ? { ...item, files: [...uploaded, ...item.files] }
-                : item,
-            ),
-          };
-        }),
-      );
-    },
-    [],
-  );
-
-  const addLocationFiles = useCallback((locationId: string, files: File[]) => {
-    const uploaded: UploadedFile[] = files.map((file) => ({
-      id: uid("f"),
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
-    }));
-
-    setLocations((current) =>
-      current.map((location) => {
-        if (location.id !== locationId) return location;
+    setRegions((current) =>
+      current.map((region) => {
+        if (region.id !== target.regionId) return region;
         return {
-          ...location,
-          lastUpdated: new Date().toISOString(),
-          files: [...uploaded, ...(location.files ?? [])],
+          ...region,
+          locations: region.locations.map((location) => {
+            if (location.id !== target.locationId) return location;
+            if (target.hardwareId === "location") {
+              return {
+                ...location,
+                lastUpdated: new Date().toISOString(),
+                files: [...uploaded, ...(location.files ?? [])],
+              };
+            }
+            return {
+              ...location,
+              lastUpdated: new Date().toISOString(),
+              hardware: location.hardware.map((item) =>
+                item.id === target.hardwareId
+                  ? { ...item, files: [...uploaded, ...(item.files ?? [])] }
+                  : item,
+              ),
+            };
+          }),
         };
       }),
     );
@@ -240,27 +298,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      locations,
+      regions,
+      selection,
+      setSelection,
       chatMessages,
       isAiOpen,
       setAiOpen,
+      isUploadOpen,
+      setUploadOpen,
       addLocation,
       updateHardwareNotes,
-      addHardwareFiles,
-      addLocationFiles,
+      uploadFiles,
       sendChatMessage,
+      getRegion,
       getLocation,
+      getHardware,
     }),
     [
-      locations,
+      regions,
+      selection,
       chatMessages,
       isAiOpen,
+      isUploadOpen,
       addLocation,
       updateHardwareNotes,
-      addHardwareFiles,
-      addLocationFiles,
+      uploadFiles,
       sendChatMessage,
+      getRegion,
       getLocation,
+      getHardware,
     ],
   );
 

@@ -1,4 +1,9 @@
-import type { HardwareStatus, LocationStatus, TrialLocation } from "@/lib/types";
+import type {
+  HardwareStatus,
+  LocationStatus,
+  Region,
+  TrialLocation,
+} from "@/lib/types";
 
 export function countLocationFiles(location: TrialLocation) {
   const siteFiles = location.files?.length ?? 0;
@@ -7,6 +12,19 @@ export function countLocationFiles(location: TrialLocation) {
     0,
   );
   return siteFiles + hardwareFiles;
+}
+
+export function countRegionFiles(region: Region) {
+  return region.locations.reduce(
+    (sum, location) => sum + countLocationFiles(location),
+    0,
+  );
+}
+
+export function flattenLocations(regions: Region[]) {
+  return regions.flatMap((region) =>
+    region.locations.map((location) => ({ region, location })),
+  );
 }
 
 export function formatBytes(bytes: number) {
