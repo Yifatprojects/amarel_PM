@@ -13,6 +13,7 @@ import type {
   ChatMessage,
   Hardware,
   HardwareCategory,
+  HardwareStatus,
   Region,
   TerrainType,
   TreeSelection,
@@ -47,6 +48,11 @@ type AppContextValue = {
     locationId: string,
     hardwareId: string,
     notes: string,
+  ) => void;
+  updateHardwareStatus: (
+    locationId: string,
+    hardwareId: string,
+    status: HardwareStatus,
   ) => void;
   uploadFiles: (target: UploadTarget, files: File[]) => void;
   sendChatMessage: (content: string) => void;
@@ -107,7 +113,7 @@ function buildMockReply(question: string): ChatMessage {
       id: uid("msg"),
       role: "assistant",
       content:
-        "Based on field artifacts from Galilee Range Alpha (Northern Israel), the signal drop on Acoustic Sensor B (18:42–18:51) most likely resulted from a transient humidity spike under the canopy. Weather Microstation WX-4 recorded a sharp moisture rise in the same window, and the technician voice note confirms condensation around the node housing. Recommend verifying seal integrity and delaying high-gain capture until humidity normalizes.",
+        "Based on field artifacts from Galilee Range Alpha (Northern Israel), the signal drop on Acoustic Node B (18:42–18:51) most likely resulted from a transient humidity spike under the canopy. Weather Microstation WX-4 recorded a sharp moisture rise in the same window, and the technician voice note confirms condensation around the node housing. Recommend verifying seal integrity and delaying high-gain capture until humidity normalizes.",
       sources: [
         { label: "CSV Log", fileName: "acoustic_log_0916.csv" },
         { label: "Weather Trace", fileName: "wx4_humidity_trace.csv" },
@@ -136,8 +142,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     normalizeRegions(initialRegions),
   );
   const [selection, setSelection] = useState<TreeSelection>({
-    type: "region",
-    regionId: initialRegions[0].id,
+    type: "map",
   });
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -189,6 +194,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             category: input.hardwareCategory,
             technician: "Unassigned",
             coordinates: input.coordinates,
+            lat: 32.0,
+            lng: 35.0,
             placementNotes: "Pending field placement.",
             notes: "",
             status: "Operational",
@@ -202,6 +209,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       name: input.name.trim(),
       status: "Standby",
       coordinates: input.coordinates.trim(),
+      lat: 32.0,
+      lng: 35.0,
       accessCode: input.accessCode.trim(),
       contactName: input.contactName.trim(),
       contactPhone: input.contactPhone.trim(),
@@ -237,6 +246,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
               lastUpdated: new Date().toISOString(),
               hardware: location.hardware.map((item) =>
                 item.id === hardwareId ? { ...item, notes } : item,
+              ),
+            };
+          }),
+        })),
+      );
+    },
+    [],
+  );
+
+  const updateHardwareStatus = useCallback(
+    (locationId: string, hardwareId: string, status: HardwareStatus) => {
+      setRegions((current) =>
+        current.map((region) => ({
+          ...region,
+          locations: region.locations.map((location) => {
+            if (location.id !== locationId) return location;
+            return {
+              ...location,
+              lastUpdated: new Date().toISOString(),
+              hardware: location.hardware.map((item) =>
+                item.id === hardwareId ? { ...item, status } : item,
               ),
             };
           }),
@@ -308,6 +338,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUploadOpen,
       addLocation,
       updateHardwareNotes,
+      updateHardwareStatus,
       uploadFiles,
       sendChatMessage,
       getRegion,
@@ -322,6 +353,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isUploadOpen,
       addLocation,
       updateHardwareNotes,
+      updateHardwareStatus,
       uploadFiles,
       sendChatMessage,
       getRegion,

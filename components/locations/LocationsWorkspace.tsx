@@ -1,37 +1,51 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MapOverview } from "@/components/map/MapOverview";
 import {
   countLocationFiles,
-  countRegionFiles,
   fileKindLabel,
   formatBytes,
   formatTimestamp,
   hardwareStatusClass,
   locationStatusClass,
+  mapPinLabel,
+  mapPinSeverity,
 } from "@/lib/format";
 import { useApp } from "@/lib/store";
-import type { Hardware, Region, TrialLocation, UploadedFile } from "@/lib/types";
+import type {
+  Hardware,
+  HardwareStatus,
+  Region,
+  TrialLocation,
+  UploadedFile,
+} from "@/lib/types";
 
 export function LocationsWorkspace() {
-  const { selection, setSelection, setUploadOpen, getRegion } =
+  const { regions, selection, setSelection, setUploadOpen, getRegion } =
     useApp();
 
+  if (selection.type === "map") {
+    return (
+      <MapOverview regions={regions} onUpload={() => setUploadOpen(true)} />
+    );
+  }
+
   const region = getRegion(selection.regionId);
+  if (!region) {
+    return (
+      <MapOverview regions={regions} onUpload={() => setUploadOpen(true)} />
+    );
+  }
+
   const location =
     selection.type === "location" || selection.type === "hardware"
-      ? region?.locations.find((item) => item.id === selection.locationId)
+      ? region.locations.find((item) => item.id === selection.locationId)
       : undefined;
   const hardware =
     selection.type === "hardware"
       ? location?.hardware.find((item) => item.id === selection.hardwareId)
       : undefined;
-
-  if (!region) {
-    return (
-      <div className="p-8 text-sm text-muted">Select a region to begin.</div>
-    );
-  }
 
   if (selection.type === "hardware" && location && hardware) {
     return (
@@ -40,6 +54,7 @@ export function LocationsWorkspace() {
         location={location}
         hardware={hardware}
         onUpload={() => setUploadOpen(true)}
+        onBackToMap={() => setSelection({ type: "map" })}
       />
     );
   }
@@ -58,84 +73,17 @@ export function LocationsWorkspace() {
           })
         }
         onUpload={() => setUploadOpen(true)}
+        onBackToMap={() => setSelection({ type: "map" })}
       />
     );
   }
 
   return (
-    <RegionDetail
-      region={region}
-      onSelectLocation={(locationId) =>
-        setSelection({
-          type: "location",
-          regionId: region.id,
-          locationId,
-        })
-      }
+    <MapOverview
+      regions={regions}
+      regionFilterId={region.id}
       onUpload={() => setUploadOpen(true)}
     />
-  );
-}
-
-function RegionDetail({
-  region,
-  onSelectLocation,
-  onUpload,
-}: {
-  region: Region;
-  onSelectLocation: (locationId: string) => void;
-  onUpload: () => void;
-}) {
-  const fileCount = countRegionFiles(region);
-  const hardwareCount = region.locations.reduce(
-    (sum, location) => sum + location.hardware.length,
-    0,
-  );
-
-  return (
-    <div className="animate-fade-in mx-auto max-w-5xl px-6 py-8 lg:px-8">
-      <Header
-        eyebrow="Region"
-        title={region.name}
-        subtitle={`${region.locations.length} trial locations · ${hardwareCount} hardware units · ${fileCount} files`}
-        onUpload={onUpload}
-      />
-
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <Stat label="Locations" value={String(region.locations.length)} />
-        <Stat label="Hardware" value={String(hardwareCount)} />
-        <Stat label="Files" value={String(fileCount)} />
-      </div>
-
-      <section className="mt-8">
-        <h2 className="text-lg font-semibold text-foreground">
-          Trial Locations
-        </h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {region.locations.map((location) => (
-            <button
-              key={location.id}
-              type="button"
-              onClick={() => onSelectLocation(location.id)}
-              className="rounded-xl border border-border bg-surface p-4 text-left transition hover:border-accent/35 hover:bg-surface-elevated"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="font-semibold text-foreground">{location.name}</h3>
-                <span
-                  className={`rounded-md px-2 py-1 text-[11px] font-medium ring-1 ring-inset ${locationStatusClass(location.status)}`}
-                >
-                  {location.status}
-                </span>
-              </div>
-              <p className="mt-3 text-xs text-muted">
-                {location.hardware.length} hardware ·{" "}
-                {countLocationFiles(location)} files · {location.terrain}
-              </p>
-            </button>
-          ))}
-        </div>
-      </section>
-    </div>
   );
 }
 
@@ -144,11 +92,13 @@ function LocationDetail({
   location,
   onSelectHardware,
   onUpload,
+  onBackToMap,
 }: {
   region: Region;
   location: TrialLocation;
   onSelectHardware: (hardwareId: string) => void;
   onUpload: () => void;
+  onBackToMap: () => void;
 }) {
   const sensors = location.hardware.filter((item) => item.category === "Sensor");
   const loggers = location.hardware.filter((item) => item.category === "Logger");
@@ -156,6 +106,13 @@ function LocationDetail({
 
   return (
     <div className="animate-fade-in mx-auto max-w-5xl px-6 py-8 lg:px-8">
+      <button
+        type="button"
+        onClick={onBackToMap}
+        className="text-xs font-medium uppercase tracking-[0.14em] text-muted transition hover:text-accent"
+      >
+        ← Theater Map
+      </button>
       <Header
         eyebrow={`${region.name} · Location`}
         title={location.name}
@@ -168,13 +125,13 @@ function LocationDetail({
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Meta label="GPS Coordinates" value={location.coordinates} mono />
         <Meta label="Access Code" value={location.accessCode} mono />
-        <Meta label="Terrain" value={location.terrain} />
+        <Meta label="Terrain Type" value={location.terrain} />
         <Meta label="Key Contact" value={location.contactName} />
-        <Meta label="Phone" value={location.contactPhone} mono />
+        <Meta label="Key Contact Phone" value={location.contactPhone} mono />
         <Meta label="Total Files" value={`${totalFiles}`} />
       </div>
 
-      <FileList title="Site Files" files={location.files ?? []} />
+      <FileList title="Hardware & File Stream" files={location.files ?? []} />
 
       <HardwareSection
         title="Sensors"
@@ -195,25 +152,38 @@ function HardwareDetail({
   location,
   hardware,
   onUpload,
+  onBackToMap,
 }: {
   region: Region;
   location: TrialLocation;
   hardware: Hardware;
   onUpload: () => void;
+  onBackToMap: () => void;
 }) {
-  const { updateHardwareNotes } = useApp();
+  const { updateHardwareNotes, updateHardwareStatus } = useApp();
   const [notes, setNotes] = useState(hardware.notes);
+  const [status, setStatus] = useState<HardwareStatus>(hardware.status);
 
   useEffect(() => {
     setNotes(hardware.notes);
-  }, [hardware.id, hardware.notes]);
+    setStatus(hardware.status);
+  }, [hardware.id, hardware.notes, hardware.status]);
+
+  const severity = mapPinSeverity(status);
 
   return (
     <div className="animate-fade-in mx-auto max-w-5xl px-6 py-8 lg:px-8">
+      <button
+        type="button"
+        onClick={onBackToMap}
+        className="text-xs font-medium uppercase tracking-[0.14em] text-muted transition hover:text-accent"
+      >
+        ← Theater Map
+      </button>
       <Header
         eyebrow={`${region.name} · ${location.name} · ${hardware.category}`}
         title={hardware.name}
-        subtitle={hardware.id}
+        subtitle={`${hardware.id} · ${mapPinLabel(severity)}`}
         badge={hardware.status}
         badgeClass={hardwareStatusClass(hardware.status)}
         onUpload={onUpload}
@@ -221,36 +191,72 @@ function HardwareDetail({
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         <Meta label="Field Technician" value={hardware.technician} />
-        <Meta label="Coordinates" value={hardware.coordinates} mono />
+        <Meta label="GPS Coordinates" value={hardware.coordinates} mono />
         <div className="sm:col-span-2">
           <Meta label="Placement Notes" value={hardware.placementNotes} />
         </div>
       </div>
 
-      <section className="mt-8">
-        <label
-          htmlFor="hw-notes"
-          className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-muted"
-        >
-          Editable Notes
-        </label>
-        <textarea
-          id="hw-notes"
-          rows={4}
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
-        />
-        <button
-          type="button"
-          onClick={() => updateHardwareNotes(location.id, hardware.id, notes)}
-          className="mt-2 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium text-metallic transition hover:border-accent/40 hover:text-accent"
-        >
-          Save Notes
-        </button>
+      <section className="mt-8 grid gap-4 lg:grid-cols-2">
+        <div>
+          <label
+            htmlFor="hw-status"
+            className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-muted"
+          >
+            Status Controls
+          </label>
+          <select
+            id="hw-status"
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value as HardwareStatus)
+            }
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
+          >
+            <option value="Operational">Operational / Normal</option>
+            <option value="Degraded">Warning — Degraded</option>
+            <option value="Maintenance">Warning — Pending Audit</option>
+            <option value="Offline">Critical — Disconnected</option>
+          </select>
+          <button
+            type="button"
+            onClick={() =>
+              updateHardwareStatus(location.id, hardware.id, status)
+            }
+            className="mt-2 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium text-metallic transition hover:border-accent/40 hover:text-accent"
+          >
+            Update Status
+          </button>
+        </div>
+
+        <div>
+          <label
+            htmlFor="hw-notes"
+            className="mb-2 block text-[11px] uppercase tracking-[0.14em] text-muted"
+          >
+            Field Notes
+          </label>
+          <textarea
+            id="hw-notes"
+            rows={4}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
+          />
+          <button
+            type="button"
+            onClick={() => updateHardwareNotes(location.id, hardware.id, notes)}
+            className="mt-2 rounded-lg border border-border-strong px-3 py-1.5 text-xs font-medium text-metallic transition hover:border-accent/40 hover:text-accent"
+          >
+            Save Notes
+          </button>
+        </div>
       </section>
 
-      <FileList title="Hardware Files" files={hardware.files ?? []} />
+      <FileList
+        title="Hardware & File Stream"
+        files={hardware.files ?? []}
+      />
     </div>
   );
 }
@@ -351,7 +357,7 @@ function Header({
   onUpload: () => void;
 }) {
   return (
-    <header className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-start sm:justify-between">
+    <header className="mt-4 flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <p className="text-[11px] uppercase tracking-[0.16em] text-muted">
           {eyebrow}
@@ -379,15 +385,6 @@ function Header({
         </button>
       </div>
     </header>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-surface px-4 py-3.5">
-      <p className="text-[11px] uppercase tracking-[0.12em] text-muted">{label}</p>
-      <p className="mt-1.5 text-2xl font-semibold text-foreground">{value}</p>
-    </div>
   );
 }
 

@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { countLocationFiles, countRegionFiles } from "@/lib/format";
 import { useApp } from "@/lib/store";
-import type { Hardware, TrialLocation } from "@/lib/types";
+import type { Hardware, Region, TrialLocation } from "@/lib/types";
 
 export function TreeSidebar() {
   const { regions, selection, setSelection } = useApp();
+  const [query, setQuery] = useState("");
   const [expandedRegions, setExpandedRegions] = useState<Record<string, boolean>>(
     () => Object.fromEntries(regions.map((region) => [region.id, true])),
   );
@@ -28,6 +29,53 @@ export function TreeSidebar() {
     return null;
   }, [selection]);
 
+  const filteredRegions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return regions;
+
+    return regions
+      .map((region) => {
+        const regionMatch = region.name.toLowerCase().includes(q);
+        const locations = region.locations
+          .map((location) => {
+            const locationMatch =
+              location.name.toLowerCase().includes(q) ||
+              location.status.toLowerCase().includes(q) ||
+              location.terrain.toLowerCase().includes(q) ||
+              location.accessCode.toLowerCase().includes(q);
+
+            const hardware = location.hardware.filter(
+              (item) =>
+                item.name.toLowerCase().includes(q) ||
+                item.category.toLowerCase().includes(q) ||
+                item.status.toLowerCase().includes(q) ||
+                item.technician.toLowerCase().includes(q) ||
+                item.id.toLowerCase().includes(q),
+            );
+
+            if (regionMatch || locationMatch) {
+              return location;
+            }
+            if (hardware.length > 0) {
+              return { ...location, hardware };
+            }
+            return null;
+          })
+          .filter(Boolean) as TrialLocation[];
+
+        if (regionMatch || locations.length > 0) {
+          return {
+            ...region,
+            locations: regionMatch ? region.locations : locations,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as Region[];
+  }, [regions, query]);
+
+  const searching = query.trim().length > 0;
+
   function toggleRegion(regionId: string) {
     setExpandedRegions((current) => ({
       ...current,
@@ -42,7 +90,13 @@ export function TreeSidebar() {
     }));
   }
 
+  function isRegionExpanded(regionId: string) {
+    if (searching) return true;
+    return expandedRegions[regionId] ?? true;
+  }
+
   function isLocationExpanded(locationId: string) {
+    if (searching) return true;
     if (locationId in expandedLocations) return expandedLocations[locationId];
     return autoExpand === locationId;
   }
@@ -56,11 +110,46 @@ export function TreeSidebar() {
         <h2 className="mt-1 text-sm font-semibold text-foreground">
           Regions · Locations · Hardware
         </h2>
+
+        <div className="relative mt-3">
+          <label htmlFor="tree-search" className="sr-only">
+            Search regions, locations, and hardware
+          </label>
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted">
+            <SearchIcon />
+          </span>
+          <input
+            id="tree-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search tree…"
+            className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted/70 focus:border-accent/50 focus:ring-1 focus:ring-accent/30"
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setSelection({ type: "map" })}
+          className={`mt-3 w-full rounded-lg px-3 py-2 text-left text-xs font-semibold transition ${
+            selection.type === "map"
+              ? "bg-accent/10 text-accent ring-1 ring-accent/25"
+              : "border border-border text-metallic hover:border-accent/35 hover:text-accent"
+          }`}
+        >
+          Theater Map Overview
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">
-        {regions.map((region) => {
-          const regionOpen = expandedRegions[region.id] ?? true;
+        {filteredRegions.length === 0 && (
+          <p className="px-3 py-6 text-center text-xs text-muted">
+            No matches for “{query.trim()}”.
+          </p>
+        )}
+
+        {filteredRegions.map((region) => {
+          const regionOpen = isRegionExpanded(region.id);
           const regionActive =
             selection.type === "region" && selection.regionId === region.id;
 
@@ -253,6 +342,20 @@ function HardwareGroup({
         })}
       </ul>
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="m10.5 10.5 3 3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

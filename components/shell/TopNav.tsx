@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useApp } from "@/lib/store";
 
 const tabs = [
-  { href: "/", label: "Locations", match: (path: string) => path === "/" },
+  { href: "/", label: "Locations & Map", match: (path: string) => path === "/" },
   {
     href: "#ai",
     label: "AI Assistant",
@@ -26,7 +26,7 @@ const tabs = [
 
 export function TopNav() {
   const pathname = usePathname();
-  const { setAiOpen, isAiOpen, setUploadOpen } = useApp();
+  const { setAiOpen, isAiOpen, setUploadOpen, setSelection } = useApp();
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
@@ -71,6 +71,9 @@ export function TopNav() {
               <Link
                 key={tab.href}
                 href={tab.href}
+                onClick={() => {
+                  if (tab.href === "/") setSelection({ type: "map" });
+                }}
                 className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
                   active
                     ? "bg-accent/10 text-accent ring-1 ring-accent/25"
@@ -86,7 +89,7 @@ export function TopNav() {
         <button
           type="button"
           onClick={() => setUploadOpen(true)}
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-background shadow-[0_0_24px_rgba(125,211,199,0.18)] transition hover:brightness-110"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-[0_0_24px_rgba(125,211,199,0.18)] transition hover:brightness-110"
         >
           <span aria-hidden className="text-base leading-none">
             +

@@ -16,6 +16,8 @@ export type HardwareStatus =
 
 export type HardwareCategory = "Sensor" | "Logger";
 
+export type MapPinSeverity = "operational" | "warning" | "critical";
+
 export type UploadedFile = {
   id: string;
   name: string;
@@ -30,6 +32,8 @@ export type Hardware = {
   category: HardwareCategory;
   technician: string;
   coordinates: string;
+  lat: number;
+  lng: number;
   placementNotes: string;
   notes: string;
   status: HardwareStatus;
@@ -41,6 +45,8 @@ export type TrialLocation = {
   name: string;
   status: LocationStatus;
   coordinates: string;
+  lat: number;
+  lng: number;
   accessCode: string;
   contactName: string;
   contactPhone: string;
@@ -65,6 +71,7 @@ export type ChatMessage = {
 };
 
 export type TreeSelection =
+  | { type: "map" }
   | { type: "region"; regionId: string }
   | { type: "location"; regionId: string; locationId: string }
   | {
@@ -78,4 +85,13 @@ export type UploadTarget = {
   regionId: string;
   locationId: string;
   hardwareId: string | "location";
+};
+
+export type MapHardwarePin = {
+  regionId: string;
+  regionName: string;
+  locationId: string;
+  locationName: string;
+  hardware: Hardware;
+  severity: MapPinSeverity;
 };

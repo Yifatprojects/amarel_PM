@@ -1,6 +1,8 @@
 import type {
   HardwareStatus,
   LocationStatus,
+  MapHardwarePin,
+  MapPinSeverity,
   Region,
   TrialLocation,
 } from "@/lib/types";
@@ -24,6 +26,62 @@ export function countRegionFiles(region: Region) {
 export function flattenLocations(regions: Region[]) {
   return regions.flatMap((region) =>
     region.locations.map((location) => ({ region, location })),
+  );
+}
+
+export function mapPinSeverity(status: HardwareStatus): MapPinSeverity {
+  switch (status) {
+    case "Operational":
+      return "operational";
+    case "Degraded":
+    case "Maintenance":
+      return "warning";
+    case "Offline":
+      return "critical";
+  }
+}
+
+export function mapPinColor(severity: MapPinSeverity) {
+  switch (severity) {
+    case "operational":
+      return "#10b981";
+    case "warning":
+      return "#f59e0b";
+    case "critical":
+      return "#f43f5e";
+  }
+}
+
+export function mapPinLabel(severity: MapPinSeverity) {
+  switch (severity) {
+    case "operational":
+      return "Operational / Normal";
+    case "warning":
+      return "Warning / Pending Audit";
+    case "critical":
+      return "Critical Anomaly / Disconnected";
+  }
+}
+
+export function collectHardwarePins(
+  regions: Region[],
+  regionId?: string,
+): MapHardwarePin[] {
+  const scoped = regionId
+    ? regions.filter((region) => region.id === regionId)
+    : regions;
+
+  return scoped.flatMap((region) =>
+    region.locations.flatMap((location) =>
+      location.hardware.map((hardware) => ({
+        regionId: region.id,
+        regionName: region.name,
+        locationId: location.id,
+        locationName: location.name,
+        hardware,
+        severity: mapPinSeverity(hardware.status),
+      })),
+    ),
   );
 }
 
@@ -63,7 +121,7 @@ export function hardwareStatusClass(status: HardwareStatus) {
     case "Degraded":
       return "bg-warning/15 text-warning ring-warning/30";
     case "Maintenance":
-      return "bg-metallic/10 text-metallic ring-metallic/25";
+      return "bg-warning/15 text-warning ring-warning/30";
     case "Offline":
       return "bg-danger/15 text-danger ring-danger/30";
   }

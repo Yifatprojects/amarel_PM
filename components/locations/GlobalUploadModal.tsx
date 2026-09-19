@@ -10,14 +10,20 @@ export function GlobalUploadModal() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
-  const [regionId, setRegionId] = useState(selection.regionId);
+  const [regionId, setRegionId] = useState(regions[0]?.id ?? "");
   const [locationId, setLocationId] = useState("");
   const [hardwareId, setHardwareId] = useState<string>("location");
 
   useEffect(() => {
     if (!isUploadOpen) return;
-    setRegionId(selection.regionId);
-    setLocationId(selection.type === "region" ? "" : selection.locationId);
+    setRegionId(
+      selection.type === "map" ? regions[0]?.id ?? "" : selection.regionId,
+    );
+    setLocationId(
+      selection.type === "location" || selection.type === "hardware"
+        ? selection.locationId
+        : "",
+    );
     setHardwareId(
       selection.type === "hardware" ? selection.hardwareId : "location",
     );
